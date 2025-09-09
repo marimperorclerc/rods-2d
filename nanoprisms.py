@@ -8,8 +8,8 @@ References
 Authorship and Verification
 ---------------------------
 
-* **Author:** Steve King **Date:** 19/11/2019
-* **Last Modified by:** Steve King **Date:** 24/06/2020
+* **Authors:** Jules Marcone, Marianne Imperor-Clerc **Date:** 07/09/2025
+* **Last Modified by:** MIC **Date:** 09/09/2025
 * **Last Reviewed by:** **Date:**
 
 """
