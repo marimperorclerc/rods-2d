@@ -11,6 +11,5 @@ Reference: [J. Marcone et al. , Form factor of prismatic particles for small-ang
 * Need to install first the prismformfactors package here:
 * https://github.com/jules-marcone/prismformfactors
 * More explanations are given in `nanoprisms_Lebedev.ipynb`
-(please remove the `control.py `in the init file `__init__.py` of the prismformfactors package)
 
   
