@@ -14,3 +14,4 @@ Reference: [J. Marcone et al. , Form factor of prismatic particles for small-ang
 
 #### TO DO  
 change code in nanoprisms.py to allow option `Iq.vectorized = True`
+use `nanoprisms-direct-test.ipynb` to test a new code.
