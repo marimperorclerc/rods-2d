@@ -9,7 +9,7 @@ Authorship and Verification
 ---------------------------
 
 * **Authors:** Jules Marcone, Marianne Imperor-Clerc **Date:** 07/09/2025
-* **Last Modified by:** MIC **Date:** 09/09/2025
+* **Last Modified by:** Simon Cayez **Date:** 29/09/2025
 * **Last Reviewed by:** **Date:**
 
 """
@@ -57,16 +57,37 @@ def Iqabc(qa,qb,qc,nsides,Rave,L): # proportionnal to the volume**2
     intensity=formfactor.I_nanoprism([qa,qb,qc],nsides,edge,L)
     return intensity
 
-def Iq(q,sld,sld_solvent,nsides:int,Rave,L,norder:int): # proportionnal to the volume**2
-    nsides=int(nsides)
-    norder=int(norder)
-    "Lebedev integration at q"
-    order=int(orderlist[norder])
-    q_unit,w = leblib.get_points_and_weights(order)
-    qa=q*q_unit[:,0]
-    qb=q*q_unit[:,1]
-    qc=q*q_unit[:,2]
-    integral = 1 * np.sum(w * Iqabc(qa,qb,qc,nsides,Rave,L))
-    return integral*(sld-sld_solvent)**2
+# def Iq(q,sld,sld_solvent,nsides:int,Rave,L,norder:int): # proportionnal to the volume**2
+#     nsides=int(nsides)
+#     norder=int(norder)
+#     "Lebedev integration at q"
+#     order=int(orderlist[norder])
+#     q_unit,w = leblib.get_points_and_weights(order)
+#     qa=q*q_unit[:,0]
+#     qb=q*q_unit[:,1]
+#     qc=q*q_unit[:,2]
+#     integral = 1 * np.sum(w * Iqabc(qa,qb,qc,nsides,Rave,L))
+#     return integral*(sld-sld_solvent)**2
 
-Iq.vectorized = False  # Iq only for one float value q
+def Iq(q, sld, sld_solvent, nsides:int, Rave, L, norder:int):
+    nsides = int(nsides)
+    norder = int(norder)
+    order = int(orderlist[norder])
+    q_unit, w = leblib.get_points_and_weights(order)  # shape (npoints,3)
+
+    q = np.atleast_1d(q)  # make sure q is a 1D table
+    # qa, qb, qc have the shape (nq, npoints)
+    qa = q[:, np.newaxis] * q_unit[:, 0][np.newaxis, :]
+    qb = q[:, np.newaxis] * q_unit[:, 1][np.newaxis, :]
+    qc = q[:, np.newaxis] * q_unit[:, 2][np.newaxis, :]
+
+    # Iqabc need to have qa, qb and qc with the same shape
+    intensity = Iqabc(qa, qb, qc, nsides, Rave, L)  # shape (nq, npoints)
+
+    # sum over the points of Lebedev quadrature (axis=1) for each q
+    integral = np.sum(w[np.newaxis, :] * intensity, axis=1)
+
+    return integral * (sld - sld_solvent)**2
+
+
+Iq.vectorized = True  # Iq can be vectorized
