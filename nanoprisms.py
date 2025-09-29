@@ -46,13 +46,18 @@ parameters = [["sld", "1e-6/Ang^2", 126., [-inf, inf], "sld",
                "number for Lebedev order in orderlist"]
                ]
 
-def Iqabc(qa,qb,qc,nsides,Rave,L):
+def volume(nsides,Rave,L):
     nsides=int(nsides)
     edge = functions.edge_from_gyration_radius(nsides,Rave)
-    intensity=formfactor.I_nanoprism([qa,qb,qc],nsides,edge,L)/(functions.volume_nanoprism(nsides,edge,L))**2
+    return functions.volume_nanoprism(nsides,edge,L)
+
+def Iqabc(qa,qb,qc,nsides,Rave,L): # proportionnal to the volume**2
+    nsides=int(nsides)
+    edge = functions.edge_from_gyration_radius(nsides,Rave)
+    intensity=formfactor.I_nanoprism([qa,qb,qc],nsides,edge,L)
     return intensity
 
-def Iq(q,sld,sld_solvent,nsides:int,Rave,L,norder:int):
+def Iq(q,sld,sld_solvent,nsides:int,Rave,L,norder:int): # proportionnal to the volume**2
     nsides=int(nsides)
     norder=int(norder)
     "Lebedev integration at q"
