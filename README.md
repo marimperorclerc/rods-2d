@@ -12,3 +12,6 @@ Reference: [J. Marcone et al. , Form factor of prismatic particles for small-ang
 * https://github.com/jules-marcone/prismformfactors
 * More explanations are given in `nanoprisms_Lebedev.ipynb`
 
+#### Test data
+* AuAg pentagonal nanoprism (n=5) E6 sample (Jules Marcone) in `nanoprisms_Lebedev.ipynb`
+* Au nanorods (n=8) (Dorthe) in `nanoprisms_Leb_data_Dorthe-Au-NR.ipynb`
