@@ -1,14 +1,16 @@
 r"""
-This model describes the scattering of light by nanoprisms using the Fibonacci quadrature.
+This model describes the scattering of light by nanoprisms using the lebedev quadrature.
 
 Definition
 ----------
-Fibonacci quadrature is a numerical integration method that uses evaluation points spaced 
-according to Fibonacci ratios to efficiently approximate an integral with minimal function evaluations.
+The Lebedev quadrature is an approximation to the surface integral of a function over a three-dimensional sphere.
+The grid is constructed so to have octahedral rotation and inversion symmetry. 
+The number and location of the grid points together with a corresponding set of integration 
+weights are determined by enforcing the exact integration of polynomials (or equivalently, spherical harmonics) up to a given order, 
+leading to a sequence of increasingly dense grids analogous to the one-dimensional Gauss–Legendre scheme.
 This method is based on the generation of a set of points on the unit sphere and their associated weights.
 Here, it is used to perform the orientational averaging of the scattering intensity. 
-This method has been shown to be a good compromise between computational cost and accuracy.
-The quadrature input parameter is the number of points to be generated on the sphere.
+The quadrature input parameter is the number of index of the order of the Lebedev quadrature (see orderlist).
 
 References
 ----------
@@ -21,21 +23,25 @@ Authorship and Verification
 * **Last Reviewed by:** **Date:**
 
 """
-name = "nanoprisms_fibonacci"
-title = "nanoprisms fibonnacci quadrature"
+name = "nanoprisms_lebedev"
+title = "nanoprisms lebedev quadrature"
 description = """
-        nanoprisms fibonacci quadrature"""
+        nanoprisms lebedev quadrature"""
 
 category = "plugin"
 
 import numpy as np
 from numpy import inf
+from pylebedev import PyLebedev
 from prismformfactors import *
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+# List of the different quadrature orders in Lebedev
+orderlist=[3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 35, 41, 47, 53, 59, 65, 71, 77, 83, 89, 95, 101, 107, 113, 119, 125, 131]
 
+leblib = PyLebedev()
 
 #             ["name", "units", default, [lower, upper], "type", "description"],
 parameters = [["sld", "1e-6/Ang^2", 126., [-inf, inf], "sld",
@@ -48,8 +54,8 @@ parameters = [["sld", "1e-6/Ang^2", 126., [-inf, inf], "sld",
                "Average radius"],
               ["L", "Ang", 5000, [0., inf], "volume",
                "length"],
-              ["npoints_fibonacci",     "",           300, [1, 1e6],   "", 
-                        "Number of points on the sphere for the Fibonacci integration"]
+              ["norder_index",     "",        20, [0, 31],   "",       
+                  "Order index for the Lebedev quadrature, see orderlist"]
                ]
 
 
@@ -65,50 +71,44 @@ def Iqabc(qa,qb,qc,nsides,Rave,L): # proportionnal to the volume**2
     return intensity
 
 
-######################################## Fibonacci integration ################################################
 
-def fibonacci_sphere(npoints_fibonacci: int):
+######################################## Lebedev integration ##################################################
+
+def lebedev_sphere(norder_index: int):
     """
-    Generates npoints quasi-uniformly distributed on the unit sphere
+    Generates quasi-uniformly distributed points on the unit sphere
     in Cartesian coordinates (x,y,z) and their associated weights.
     Parameters
     ----------
-    npoints : int
-        Number of points to generate.
+    norder : int
+        index of the order of the Lebedev quadrature (see orderlist).
     Returns
     -------
     points : ndarray, shape (npoints, 3)
         Cartesian coordinates of the points on the unit sphere.
     weights : ndarray, shape (npoints,)
         Weights associated with each point for integration on the sphere.
+
     """
 
-    indices = np.arange(0, npoints_fibonacci, dtype=float) + 0.5
-    phi = np.arccos(1 - 2*indices/npoints_fibonacci)        
-    theta = 2 * np.pi * indices / ((1 + 5**0.5) / 2)  
-    
-    x = np.cos(theta) * np.sin(phi)
-    y = np.sin(theta) * np.sin(phi)
-    z = np.cos(phi)
+    order = orderlist[int(norder_index)]
+    q_unit, w = leblib.get_points_and_weights(order)  # shape (npoints,3)
 
-    weight = np.full(len(x),1/npoints_fibonacci)
-    
-    return np.column_stack((x, y, z)), weight
+    return q_unit, w
 
 
-def plot_fibonacci_sphere(npoints_fibonacci=500, figsize=(7,7)):
+def plot_lebedev_sphere(norder_index, figsize=(7,7)):
     """
-    3D representation of Fibonacci points on the unit sphere.
+    3D representation of Lebedev points on the unit sphere.
     Parameters
     ----------
-    npoints : int
-        Number of points to generate and display.
+    norder : int
+        Index in orderlist for the Lebedev order.
     figsize : tuple
         Size of the figure.
-
     """
-    pts,w = fibonacci_sphere(npoints_fibonacci)
-
+    pts, w = lebedev_sphere(norder_index)  # shape (npoints,3)
+    order = orderlist[int(norder_index)]
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection="3d")
     ax.scatter(pts[:,0], pts[:,1], pts[:,2], s=10, alpha=0.6)
@@ -117,65 +117,58 @@ def plot_fibonacci_sphere(npoints_fibonacci=500, figsize=(7,7)):
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    ax.set_title(f"Fibonacci points on the unit sphere, ({npoints_fibonacci} total points)")
+    ax.set_title(f"Lebedev points on the unit sphere  (order of the polynom: {order}, {len(pts)} total points)")
     ax.set_box_aspect([1,1,1])  # sphère non déformée
     plt.show()
 
 
-def Iq(q, sld, sld_solvent, nsides:int, Rave, L, npoints_fibonacci:int=1000):
-    """
-    Integration over the unit sphere with Fibonacci points.
-    Each point has an equal weight = 1/npoints.
 
+def Iq(q, sld, sld_solvent, nsides:int, Rave, L, norder_index:int):
+    """
+    Orientation integration on the unit sphere with Lebedev points.
     Parameters
     ----------
     q : float ou array
-        Norm of the scattering vector
-    sld, sld_solvent : 
-        Contrast of scattering length density
-    nsides, Rave, L : 
-        Geometrical parameters of the prism
-    npoints : int
-        Number of Fibonacci points on the sphere
+        Scattering vector
+    sld, sld_solvent : contrast of scattering length density
+    nsides, Rave, L : geometrical parameters of the prism
+    norder : int
+        Index in orderlist for the Lebedev order
     Returns
     -------
     Iq : ndarray
         Scattering intensity averaged over all orientations
-    time_fib : float
+    time_lebedev : float
         Execution time of the function in seconds
     n_points_total : int
-        Total number of points used in the quadrature
+        Total number of points on the sphere
     """
 
     time_start = time.time()
-    n_points_total = npoints_fibonacci
     nsides = int(nsides)
-    q = np.atleast_1d(q)  # vecteur q
 
-    
-    q_unit,w = fibonacci_sphere(npoints_fibonacci)   # shape (npoints, 3)
+    q_unit, w = lebedev_sphere(norder_index)  # shape (npoints,3)
+    n_points_total = len(q_unit)
+    q = np.atleast_1d(q)  # make sure q is a 1D table
 
-    # Projections
+    # qa, qb, qc have the shape (nq, npoints)
     qa = q[:, np.newaxis] * q_unit[:, 0][np.newaxis, :]
     qb = q[:, np.newaxis] * q_unit[:, 1][np.newaxis, :]
     qc = q[:, np.newaxis] * q_unit[:, 2][np.newaxis, :]
 
-    # Compute intensity
+    # Compute intensity: Iqabc need to have qa, qb and qc with the same shape
     intensity = Iqabc(qa, qb, qc, nsides, Rave, L)  # shape (nq, npoints)
 
-    # Uniform average over the sphere
+    # sum over the points of Lebedev quadrature (axis=1) for each q
     integral = np.sum(w[np.newaxis, :] * intensity, axis=1)
-    integral = np.mean(intensity, axis=1)
     time_end = time.time()
-    time_fib = time_end - time_start
-   
-    print(f'Execution time Fibonacci with {npoints_fibonacci} points: {time_fib:.4f} seconds')
+    time_lebedev = time_end - time_start
+
+    print(f'Execution time Lebedev with {len(q_unit)} points: {time_lebedev:.4f} seconds')
 
     return integral * (sld - sld_solvent)**2
 
-
-Iq.vectorized = True
-
+Iq.vectorized = True  # Iq can be vectorized
 
 
 
